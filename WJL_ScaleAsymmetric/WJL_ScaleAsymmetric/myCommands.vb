@@ -15,65 +15,80 @@ Namespace WJL_ScaleAsymmetric
     Public Class MyCommands
 
         ' Modal Command with pickfirst selection
-        <CommandMethod("MyGroup", "MyPickFirst", "MyPickFirstLocal", CommandFlags.Modal + CommandFlags.UsePickSet)> _
-        Public Sub MyPickFirst() ' This method can have any name
-            Dim acSSPrompt As PromptSelectionResult = Application.DocumentManager.MdiActiveDocument.Editor.GetSelection()
-            Dim acSSet As SelectionSet
+        <CommandMethod("ScaleNonUniform", CommandFlags.Modal + CommandFlags.UsePickSet)> _
+        Public Sub ScaleNonUniform() 'This command uses 'pickfirst' 
+            Dim acSSPrompt As PromptSelectionResult = Application.DocumentManager.MdiActiveDocument.Editor.GetSelection() 'If entities are selected use those, otherwise ask for selection
 
-            If (acSSPrompt.Status = PromptStatus.OK) Then
-                ' There are selected entities
-                ' Put your command using pickfirst set code here
-                acSSet = acSSPrompt.Value
-            Else
-                ' There are no selected entities
-                ' Put your command code here
-                MsgBox("!")
-
-            End If
-
+            '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            'These need to be user inputs...
             Dim origin = New Point3d(0, 0, 0)
             Dim scaleX As Double = 1
             Dim scaleY As Double = 2
             Dim scaleZ As Double = 1
+            '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-            Dim blkid As ObjectId = CreateAnonymousBlock(acSSet, origin)
+            If (acSSPrompt.Status = PromptStatus.OK) Then
+                ' There are selected entities...
 
-            Dim doc As Document = Application.DocumentManager.MdiActiveDocument
-            Dim db As Database = doc.Database
-            Dim ed As Editor = doc.Editor
-            Using tr As Transaction = doc.TransactionManager.StartTransaction()
-                Dim currSpace As BlockTableRecord = TryCast(tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite), BlockTableRecord)
-                Using insert As New BlockReference(origin, blkid)
+                'Put the selected entities in a selection set
+                Dim acSSet As SelectionSet = acSSPrompt.Value
+
+                'Use the CreateAnonymousBlock function to add the entities to an anonymous block and get its ID
+                Dim blkid As ObjectId = CreateAnonymousBlock(acSSet, origin)
+
+                'Get the current drawing document (doc) and its database (db) and start a transaction (tr)
+                Dim doc As Document = Application.DocumentManager.MdiActiveDocument
+                Dim db As Database = doc.Database
+                Using tr As Transaction = doc.TransactionManager.StartTransaction()
+                    'Get block table record for the current space
+                    Dim currSpace As BlockTableRecord = TryCast(tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite), BlockTableRecord)
+
+                    'Inset the anonymous block, add it to the btr and give it default properties
+                    Dim insert As New BlockReference(origin, blkid)
                     currSpace.AppendEntity(insert)
                     insert.SetDatabaseDefaults()
+
+                    '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+                    'Apply the block scaling
                     insert.ScaleFactors = New Scale3d(scaleX, scaleY, scaleZ)
-                    tr.AddNewlyCreatedDBObject(insert, True)
+                    '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+                    'tr.AddNewlyCreatedDBObject(insert, True)
+
+                    'Explode the scaled block and add the constituent entities to a DBObjectCollection (acDBObjColl)
                     Dim acDBObjColl As DBObjectCollection = New DBObjectCollection()
                     insert.Explode(acDBObjColl)
 
+                    '' Add each entity from the exploded block to the block table record and the transaction
                     For Each acEnt As Entity In acDBObjColl
-                        '' Add the new object to the block table record and the transaction
                         currSpace.AppendEntity(acEnt)
                         tr.AddNewlyCreatedDBObject(acEnt, True)
                     Next
-                End Using
-                tr.Commit()
-            End Using
 
+                    tr.Commit()
+                End Using
+            Else
+                ' There are no selected entities
+                MsgBox("!")
+            End If
         End Sub
 
 
         Public Shared Function CreateAnonymousBlock(acSSet As SelectionSet, origin As Point3d) As ObjectId
+            '' ^might make (origin) optional
+
+            '' Set the block name to"*U" in order to make the block anonymous
             Dim blockname As String = "*U"
 
             Dim blkid As ObjectId = ObjectId.Null
-            'Try
 
+            '' Get the ??? WorkingDatabase ??? and start a transaction
             Dim db As Database = HostApplicationServices.WorkingDatabase
             Using tr As Transaction = db.TransactionManager.StartTransaction()
 
                 Dim bt As BlockTable = DirectCast(tr.GetObject(db.BlockTableId, OpenMode.ForWrite, False), BlockTable)
 
+                '' Set up the new block
                 Dim btr As New BlockTableRecord()
                 btr.Name = blockname
                 btr.Explodable = True
@@ -85,19 +100,15 @@ Namespace WJL_ScaleAsymmetric
                 For Each acSSObj As SelectedObject In acSSet
                     '' Check to make sure a valid SelectedObject object was returned
                     If Not IsDBNull(acSSObj) Then
-                        '' Open the selected object for write
+                        '' Open the selected object for read
                         Dim acEnt As Entity = tr.GetObject(acSSObj.ObjectId, OpenMode.ForRead)
 
                         If Not IsDBNull(acEnt) Then
-                            '' Change the object's color to Green
+                            '' If the entity exists, copy it into the block
                             btr.AppendEntity(acEnt.Clone)
                         End If
                     End If
                 Next
-
-                'For Each item As Entity In acSSet
-                '    btr.AppendEntity(item)
-                'Next
 
                 blkid = bt.Add(btr)
                 tr.AddNewlyCreatedDBObject(btr, True)
@@ -105,10 +116,8 @@ Namespace WJL_ScaleAsymmetric
                 tr.Commit()
 
             End Using
-            'Catch ex As Autodesk.AutoCAD.Runtime.Exception
-            ' Application.ShowAlertDialog((("ERROR: " & vbLf) + ex.Message & vbLf & "SOURCE: ") + ex.StackTrace)
-            ' End Try
-            Return blkid
+
+            Return blkid '' Return the ObjectID of the anaonymous block
         End Function
     End Class
 
