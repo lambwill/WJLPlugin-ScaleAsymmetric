@@ -19,13 +19,39 @@ Namespace WJL_ScaleAsymmetric
         Public Sub ScaleNonUniform() 'This command uses 'pickfirst' 
             Dim acSSPrompt As PromptSelectionResult = Application.DocumentManager.MdiActiveDocument.Editor.GetSelection() 'If entities are selected use those, otherwise ask for selection
 
-            '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-            'These need to be user inputs...
-            Dim origin = New Point3d(0, 0, 0)
-            Dim scaleX As Double = 1
-            Dim scaleY As Double = 2
-            Dim scaleZ As Double = 1
-            '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            
+            Dim doc As Document = Application.DocumentManager.MdiActiveDocument
+            Dim pPtRes As PromptPointResult
+            Dim pPtOpts As PromptPointOptions = New PromptPointOptions("")
+
+            '' Prompt for the base point
+            pPtOpts.Message = vbLf & "Enter the base point for scale: "
+            pPtRes = doc.Editor.GetPoint(pPtOpts)
+            Dim origin = pPtRes.Value
+
+            '' Exit if the user presses ESC or cancels the command
+            If pPtRes.Status = PromptStatus.Cancel Then Exit Sub
+
+            Dim pDblRes As PromptDoubleResult
+            Dim pDblOpts As PromptDoubleOptions = New PromptDoubleOptions("")
+
+            pDblOpts.AllowZero = False
+
+            '' Prompt for the X scale
+            pDblOpts.Message = vbLf & "Enter the X scale: "
+            pDblRes = doc.Editor.GetDouble(pDblOpts)
+            Dim scaleX As Double = pDblRes.Value
+
+            '' Prompt for the Y scale
+            pDblOpts.Message = vbLf & "Enter the Y scale: "
+            pDblRes = doc.Editor.GetDouble(pDblOpts)
+            Dim scaleY As Double = pDblRes.Value
+
+            '' Prompt for the Z scale
+            pDblOpts.Message = vbLf & "Enter the Z scale: "
+            pDblRes = doc.Editor.GetDouble(pDblOpts)
+            Dim scaleZ As Double = pDblRes.Value
+
 
             If (acSSPrompt.Status = PromptStatus.OK) Then
                 ' There are selected entities...
@@ -37,7 +63,7 @@ Namespace WJL_ScaleAsymmetric
                 Dim blkid As ObjectId = CreateAnonymousBlock(acSSet, origin)
 
                 'Get the current drawing document (doc) and its database (db) and start a transaction (tr)
-                Dim doc As Document = Application.DocumentManager.MdiActiveDocument
+
                 Dim db As Database = doc.Database
                 Using tr As Transaction = doc.TransactionManager.StartTransaction()
                     'Get block table record for the current space
