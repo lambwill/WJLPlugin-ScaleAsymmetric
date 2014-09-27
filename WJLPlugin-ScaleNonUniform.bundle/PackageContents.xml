@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+   <ApplicationPackage
+      SchemaVersion="1.0"
+      AppVersion="1.0.0.0"
+      Author="WJLamb"
+      Name="ScaleNonUniform"
+      Icon="./Contents/Resources/ScaleNonUniform_32x32.bmp">
+   >
+  <CompanyDetails
+    Name="lambsoft"
+    Url="www.lambsoft.net"
+    Email="support@lambsoft.net"
+  />
+  <Components>
+    <RuntimeRequirements SeriesMin="R19"/>
+    <ComponentEntry
+      AppName="ScaleNonUniform"
+      ModuleName="./Contents/2013/ScaleNonUniform.dll"
+      AppDescription="WJL Plugin: ScaleNonUniform"
+      LoadOnAutoCADStartup="False"
+      LoadOnCommandInvocation="True"
+      LoadOnRequest="True">
+      <Commands GroupName="ScaleNonUniform">
+        <Command Local="ScaleNonUniform" Global="ScaleNonUniform" />
+        </Commands>
+    </ComponentEntry>
+    <ComponentEntry
+      AppName="ScaleNonUniform"
+      ModuleName="./Contents/Resources/ScaleNonUniform.cuix" />
+  </Components>
+  
+
+    
+     
+     
+  </ApplicationPackage>
